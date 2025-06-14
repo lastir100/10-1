@@ -26,6 +26,68 @@
 - На проверку отправьте получившейся bash-скрипт и конфигурационный файл keepalived, а также скриншот с демонстрацией переезда плавающего ip на другой сервер в случае недоступности порта или файла index.html
 
 ### Решение 2
+keepalived.conf
+[VM test1](./files/test1_keepalived.conf)
+[VM test2](./files/test2_keepalived.conf)
+```sh
+# VM test1
+vrrp_script chk_cond {
+        script "/opt/check.sh"
+        interval 3
+        user nobody
+}
+
+vrrp_instance VI_1 {
+	state MASTER
+	interface enp0s3
+	virtual_router_id 100
+	priority 250
+	advert_int 1
+
+	virtual_ipaddress {
+		192.168.1.100/24
+	}
+	track_script {
+		chk_cond
+	}
+}
+
+# VM test2
+vrrp_script chk_cond {
+        script "/opt/check.sh"
+        interval 3
+        user nobody
+}
+
+vrrp_instance VI_1 {
+	state BACKUP
+	interface enp0s3
+	virtual_router_id 100
+	priority 200
+	advert_int 1
+
+	virtual_ipaddress {
+		192.168.1.100/24
+	}
+	track_script {
+		chk_cond
+	}
+}
+
+```
+скрипт проверки [check.sh](./files/check.sh)
+```sh
+#!/bin/bash
+
+if [[ -f /var/www/html/index.html ]]; then
+    if nc -z 127.0.0.1 80 2> /dev/null; then
+        exit 0  # Success
+    fi
+fi
+
+exit 1  # Failure
+```
+
 ------
 
 ## Дополнительные задания со звёздочкой*
